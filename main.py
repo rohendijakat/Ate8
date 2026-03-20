@@ -637,3 +637,74 @@ def analytics_events(
 
 
 @app.get("/analytics/events.csv", response_class=PlainTextResponse)
+def analytics_events_csv(
+    user: t.Optional[str] = None,
+    pool_id: t.Optional[int] = None,
+    event_type: t.Optional[str] = None,
+    limit: int = 500,
+    offset: int = 0,
+):
+    """
+    CSV export of the filtered event timeline.
+    """
+    if limit < 1:
+        limit = 1
+    if limit > 5_000:
+        limit = 5_000
+    if offset < 0:
+        offset = 0
+
+    items = _filter_events(user, pool_id, event_type)
+    page = items[offset : offset + limit]
+    header = "ts,event_type,user,pool_id,amount,tx_hash,block_number,status"
+    lines = [header]
+    for ev in page:
+        bn = "" if ev.block_number is None else str(ev.block_number)
+        st = "" if ev.status is None else str(ev.status)
+        lines.append(
+            f"{ev.ts},{ev.event_type},{ev.user},{ev.pool_id},{ev.amount},{ev.tx_hash},{bn},{st}"
+        )
+    return "\n".join(lines) + "\n"
+
+
+@app.get("/pools/snapshot")
+def pools_snapshot(ids: str):
+    """
+    Accepts a comma-separated list of pool IDs and returns a snapshot
+    of configuration and aggregate metadata for each.
+    """
+    try:
+        pool_ids = [int(x) for x in ids.split(",") if x.strip()]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid pool id list")
+    snap = contract.functions.snapshotPools(pool_ids).call()
+    out = []
+    for item in snap:
+        out.append(
+            {
+                "poolId": item[0],
+                "asset": item[1],
+                "leverageFactorBps": item[2],
+                "active": item[3],
+                "seasoningFactor": item[4],
+                "streakBonusBps": item[5],
+                "poolCap": item[6],
+                "minDeposit": item[7],
+                "allowlistedOnly": item[8],
+                "totalPrincipal": item[9],
+            }
+        )
+    return out
+
+
+@app.post("/portfolio/view")
+def portfolio_view(body: PortfolioQuery):
+    """
+    Returns an aggregated view of a user's positions across selected pools.
+    """
+    addr = Web3.to_checksum_address(body.user)
+    views = contract.functions.userPortfolioView(addr, body.pool_ids).call()
+    result = []
+    for v in views:
+        result.append(
+            {
