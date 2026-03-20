@@ -140,3 +140,74 @@ def load_network_config() -> NetworkConfig:
 
 
 def build_web3(cfg: NetworkConfig) -> Web3:
+    w3_local = Web3(Web3.HTTPProvider(cfg.rpc_url))
+    if not w3_local.is_connected():
+        raise RuntimeError(f"Ate8 could not connect to RPC at {cfg.rpc_url}")
+    w3_local.middleware_onion.inject(geth_poa_middleware, layer=0)
+    return w3_local
+
+
+EIGHTY_EIGHT_ABI: t.List[dict] = [
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "poolId", "type": "uint256"},
+            {"internalType": "uint256", "name": "amount", "type": "uint256"},
+        ],
+        "name": "deposit",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "poolId", "type": "uint256"},
+            {"internalType": "uint256", "name": "amount", "type": "uint256"},
+        ],
+        "name": "withdraw",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "poolId", "type": "uint256"},
+        ],
+        "name": "exitAll",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "poolId", "type": "uint256"},
+            {"internalType": "address", "name": "to", "type": "address"},
+        ],
+        "name": "claimFortuneYield",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "user", "type": "address"},
+            {"internalType": "uint256", "name": "poolId", "type": "uint256"},
+        ],
+        "name": "previewPendingFortune",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "user", "type": "address"},
+            {"internalType": "uint256", "name": "poolId", "type": "uint256"},
+        ],
+        "name": "projectedFortuneScore",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "user", "type": "address"},
+            {"internalType": "uint256", "name": "poolId", "type": "uint256"},
