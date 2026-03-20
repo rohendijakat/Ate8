@@ -353,3 +353,74 @@ app = FastAPI(title="Ate8 – 88Finacio Control Plane")
 
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+_activity_events: deque[ActivityEvent] = deque(maxlen=512)
+_totals_deposited: defaultdict[int, int] = defaultdict(int)
+_totals_withdrawn: defaultdict[int, int] = defaultdict(int)
+_users_seen: set[str] = set()
+
+
+def _record_activity(
+    event_type: str,
+    user: str,
+    pool_id: int,
+    amount: int,
+    tx_hash: str,
+    block_number: t.Optional[int] = None,
+    status: t.Optional[int] = None,
+) -> None:
+    ev = ActivityEvent(
+        ts=time.time(),
+        event_type=event_type,
+        user=user,
+        pool_id=pool_id,
+        amount=amount,
+        tx_hash=tx_hash,
+        block_number=block_number,
+        status=status,
+    )
+    _activity_events.appendleft(ev)
+    _users_seen.add(user)
+    if event_type == "deposit":
+        _totals_deposited[pool_id] += amount
+    elif event_type in ("withdraw", "exit_all"):
+        _totals_withdrawn[pool_id] += amount
+
+
+def _aggregate_stats() -> AggregateStats:
+    total_deposited = sum(_totals_deposited.values())
+    total_withdrawn = sum(_totals_withdrawn.values())
+    net = total_deposited - total_withdrawn
+    pools_seen = len(set(list(_totals_deposited.keys()) + list(_totals_withdrawn.keys())))
+    return AggregateStats(
+        total_deposited=total_deposited,
+        total_withdrawn=total_withdrawn,
+        net_flow=net,
+        unique_users=len(_users_seen),
+        pools_seen=pools_seen,
+        recent_events=list(_activity_events),
+    )
+
+
+def _build_account(pk: str):
+    try:
+        return w3.eth.account.from_key(pk)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid private key: {exc}")
+
+
+def _send_tx(account, tx) -> TxResponse:
+    tx["nonce"] = w3.eth.get_transaction_count(account.address)
+    if "gasPrice" not in tx:
+        tx["gasPrice"] = w3.eth.gas_price
+    if "chainId" not in tx:
+        tx["chainId"] = cfg.chain_id
+
+    signed = account.sign_transaction(tx)
+    tx_hash = w3.eth.send_raw_transaction(signed.rawTransaction)
