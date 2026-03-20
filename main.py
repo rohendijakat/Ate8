@@ -495,3 +495,74 @@ def guardian_advance_cycle(body: AdvanceCycleModel):
     return _send_tx(guardian, tx)
 
 
+@app.post("/user/deposit", response_model=TxResponse)
+def user_deposit(body: DepositModel):
+    account = _build_account(body.from_key)
+    tx = contract.functions.deposit(body.pool_id, body.amount_wei).build_transaction(
+        {"from": account.address}
+    )
+    res = _send_tx(account, tx)
+    _record_activity("deposit", account.address, body.pool_id, body.amount_wei, res.tx_hash, res.block_number, res.status)
+    return res
+
+
+@app.post("/user/withdraw", response_model=TxResponse)
+def user_withdraw(body: WithdrawModel):
+    account = _build_account(body.from_key)
+    tx = contract.functions.withdraw(body.pool_id, body.amount_wei).build_transaction(
+        {"from": account.address}
+    )
+    res = _send_tx(account, tx)
+    _record_activity("withdraw", account.address, body.pool_id, body.amount_wei, res.tx_hash, res.block_number, res.status)
+    return res
+
+
+@app.post("/user/exit-all", response_model=TxResponse)
+def user_exit_all(body: ExitAllModel):
+    account = _build_account(body.from_key)
+    tx = contract.functions.exitAll(body.pool_id).build_transaction(
+        {"from": account.address}
+    )
+    res = _send_tx(account, tx)
+    _record_activity("exit_all", account.address, body.pool_id, 0, res.tx_hash, res.block_number, res.status)
+    return res
+
+
+@app.post("/user/claim-fortune", response_model=TxResponse)
+def user_claim_fortune(body: ClaimFortuneModel):
+    account = _build_account(body.from_key)
+    tx = contract.functions.claimFortuneYield(
+        body.pool_id,
+        Web3.to_checksum_address(body.to),
+    ).build_transaction({"from": account.address})
+    res = _send_tx(account, tx)
+    _record_activity("claim", account.address, body.pool_id, 0, res.tx_hash, res.block_number, res.status)
+    return res
+
+
+@app.get("/fortune/preview", response_model=FortunePreview)
+def fortune_preview(user: str, pool_id: int):
+    addr = Web3.to_checksum_address(user)
+    pending = contract.functions.previewPendingFortune(addr, pool_id).call()
+    projected = contract.functions.projectedFortuneScore(addr, pool_id).call()
+    claimable = contract.functions.previewClaimableReward(addr, pool_id).call()
+    return FortunePreview(
+        user=addr,
+        pool_id=pool_id,
+        pending_fortune=pending,
+        projected_fortune=projected,
+        claimable_reward=claimable,
+    )
+
+
+@app.get("/fortune/cycle", response_model=CycleView)
+def fortune_cycle():
+    raw = contract.functions.currentLuckCycle().call()
+    cid, lucky_block, fortune_delta = raw
+    return CycleView(id=cid, lucky_block=lucky_block, fortune_delta=fortune_delta)
+
+
+@app.get("/fortune/oracle-hint", response_model=OracleHintView)
+def fortune_oracle_hint(user: str, pool_id: int, oracle_seed: int = 0):
+    addr = Web3.to_checksum_address(user)
+    seed = oracle_seed or int(time.time())
