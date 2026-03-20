@@ -424,3 +424,74 @@ def _send_tx(account, tx) -> TxResponse:
 
     signed = account.sign_transaction(tx)
     tx_hash = w3.eth.send_raw_transaction(signed.rawTransaction)
+    try:
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=180)
+        return TxResponse(
+            tx_hash=tx_hash.hex(),
+            block_number=receipt.blockNumber,
+            status=receipt.status,
+        )
+    except Exception:
+        return TxResponse(tx_hash=tx_hash.hex())
+
+
+@app.get("/health")
+def health():
+    latest = w3.eth.block_number
+    return {"status": "ok", "block": latest, "contract": cfg.contract_address}
+
+
+@app.get("/debug/config")
+def debug_config():
+    return {
+        "rpc_url": cfg.rpc_url,
+        "chain_id": cfg.chain_id,
+        "contract_address": cfg.contract_address,
+        "guardian_address": w3.eth.account.from_key(cfg.guardian_key).address,
+        "treasurer_address": w3.eth.account.from_key(cfg.treasurer_key).address,
+    }
+
+
+@app.post("/guardian/configure-pool", response_model=TxResponse)
+def configure_pool(body: PoolConfigModel):
+    guardian = _build_account(cfg.guardian_key)
+    tx = contract.functions.configurePool(
+        body.pool_id,
+        Web3.to_checksum_address(body.asset),
+        body.leverage_factor_bps,
+        body.active,
+    ).build_transaction(
+        {"from": guardian.address}
+    )
+    res = _send_tx(guardian, tx)
+    if res.status is None or res.status == 1:
+        if body.seasoning_factor or body.streak_bonus_bps:
+            tx2 = contract.functions.updatePoolSeasoning(
+                body.pool_id or 1,
+                body.seasoning_factor,
+                body.streak_bonus_bps,
+            ).build_transaction({"from": guardian.address})
+            _send_tx(guardian, tx2)
+    return res
+
+
+@app.post("/treasurer/reward-stream", response_model=TxResponse)
+def treasurer_reward_stream(body: RewardConfigModel):
+    treasurer = _build_account(cfg.treasurer_key)
+    tx = contract.functions.setRewardStream(
+        Web3.to_checksum_address(body.token),
+        body.rate_per_block_scaled,
+        body.active,
+    ).build_transaction({"from": treasurer.address})
+    return _send_tx(treasurer, tx)
+
+
+@app.post("/guardian/advance-cycle", response_model=TxResponse)
+def guardian_advance_cycle(body: AdvanceCycleModel):
+    guardian = _build_account(cfg.guardian_key)
+    tx = contract.functions.advanceLuckCycle(body.seed_hint).build_transaction(
+        {"from": guardian.address}
+    )
+    return _send_tx(guardian, tx)
+
+
