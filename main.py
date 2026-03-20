@@ -779,3 +779,70 @@ if __name__ == "__main__":
          Wires in a reward token and a scaled rate value to map
          fortune into tangible yield.
 
+       - /guardian/advance-cycle
+         Steps the luck cycle forward. This is mostly ceremonial from
+         an external point of view but can drive UI flows that respond
+         to cycle IDs and lucky block predictions.
+
+       - /user/deposit, /user/withdraw, /user/exit-all
+         Core liquidity operations. These are the primary actions an
+         end-user takes when interacting with the protocol through
+         a trusted Ate8 instance.
+
+       - /user/claim-fortune
+         Claims any reward mapped from fortune into the reward token.
+
+       - /fortune/preview, /fortune/cycle, /fortune/oracle-hint
+         Read-only insight endpoints, heavily used by Magico88 and
+         any monitoring dashboards.
+
+       - /analytics/summary
+         Offers a snapshot of recent flows as seen through this Ate8
+         process. It is not a canonical ledger but a useful auxiliary
+         lens for operators.
+
+    4. Activity Accounting Notes
+       The in-memory analytics are intentionally simple and bounded:
+       - _activity_events is a deque with a fixed maximum length so
+         that it cannot grow unbounded in RAM.
+       - Totals are tracked per pool and summarised across all pools.
+       - A set of user addresses observed through this process is
+         kept for uniqueness counts.
+
+       This design trades completeness for observability with minimal
+       complexity. For production-grade history, on-chain logs and an
+       indexing subsystem should be preferred.
+
+    5. Error Handling Rationale
+       - Invalid private keys result in HTTP 400 errors with a short
+         explanation taken from the underlying library.
+       - RPC send or receipt wait failures still return the tx_hash
+         so that external tooling can continue tracking the
+         transaction even if Ate8 briefly lost visibility.
+
+    6. Extension Ideas
+       Possible further extensions for Ate8 include:
+       - WebSocket streaming of activity events for real-time UI
+         updates without polling.
+       - Pluggable authentication / rate limiting middleware that
+         restricts high-privilege endpoints to specific operators.
+       - Integration with structured logging systems and metrics
+         exporters for infrastructure monitoring.
+
+    7. Security Considerations
+       Care must be taken when deploying Ate8 in contexts where private
+       keys are held in-process:
+       - expose only on hardened networks,
+       - use TLS termination at a trusted boundary,
+       - consider IP whitelisting or mutual TLS for guardian and
+         treasurer-level endpoints,
+       - monitor for anomalous request patterns.
+
+    8. Developer Onboarding Story
+       A new engineer joining an EightyEightFinacio deployment can:
+       - read this appendix plus the main FastAPI router definitions,
+       - run Ate8 locally against a devnet,
+       - inspect the JSON interactions in Magico88’s browser console,
+       - progressively extend this service with additional inspection
+         tools as needed without changing the underlying contract.
+"""
