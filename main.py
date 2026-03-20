@@ -566,3 +566,74 @@ def fortune_cycle():
 def fortune_oracle_hint(user: str, pool_id: int, oracle_seed: int = 0):
     addr = Web3.to_checksum_address(user)
     seed = oracle_seed or int(time.time())
+    hinted = contract.functions.oracleHintedLuck(addr, pool_id, seed).call()
+    return OracleHintView(
+        user=addr,
+        pool_id=pool_id,
+        oracle_seed=seed,
+        hinted_luck=hinted,
+    )
+
+
+@app.get("/analytics/summary")
+def analytics_summary():
+    stats = _aggregate_stats()
+    return {
+        "total_deposited": stats.total_deposited,
+        "total_withdrawn": stats.total_withdrawn,
+        "net_flow": stats.net_flow,
+        "unique_users": stats.unique_users,
+        "pools_seen": stats.pools_seen,
+        "recent_events": [asdict(ev) for ev in stats.recent_events],
+    }
+
+
+def _filter_events(
+    user: t.Optional[str],
+    pool_id: t.Optional[int],
+    event_type: t.Optional[str],
+) -> t.List[ActivityEvent]:
+    user_norm = Web3.to_checksum_address(user) if user else None
+    et_norm = event_type.lower().strip() if event_type else None
+    out: t.List[ActivityEvent] = []
+    for ev in _activity_events:
+        if user_norm and ev.user != user_norm:
+            continue
+        if pool_id is not None and ev.pool_id != pool_id:
+            continue
+        if et_norm and ev.event_type != et_norm:
+            continue
+        out.append(ev)
+    return out
+
+
+@app.get("/analytics/events")
+def analytics_events(
+    user: t.Optional[str] = None,
+    pool_id: t.Optional[int] = None,
+    event_type: t.Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+):
+    """
+    Returns recent events captured by this Ate8 instance, optionally filtered
+    by user, pool, and event type. Uses offset/limit for pagination.
+    """
+    if limit < 1:
+        limit = 1
+    if limit > 500:
+        limit = 500
+    if offset < 0:
+        offset = 0
+
+    items = _filter_events(user, pool_id, event_type)
+    page = items[offset : offset + limit]
+    return {
+        "total": len(items),
+        "offset": offset,
+        "limit": limit,
+        "events": [asdict(ev) for ev in page],
+    }
+
+
+@app.get("/analytics/events.csv", response_class=PlainTextResponse)
