@@ -69,3 +69,74 @@ class PortfolioQuery(BaseModel):
 
 class TxResponse(BaseModel):
     tx_hash: str
+    block_number: t.Optional[int] = None
+    status: t.Optional[int] = None
+
+
+@dataclass
+class PoolView:
+    pool_id: int
+    asset: str
+    leverage_factor_bps: int
+    active: bool
+    seasoning_factor: int
+    streak_bonus_bps: int
+
+
+@dataclass
+class FortunePreview:
+    user: str
+    pool_id: int
+    pending_fortune: int
+    projected_fortune: int
+    claimable_reward: int
+
+
+@dataclass
+class CycleView:
+    id: int
+    lucky_block: int
+    fortune_delta: int
+
+
+@dataclass
+class OracleHintView:
+    user: str
+    pool_id: int
+    oracle_seed: int
+    hinted_luck: int
+
+
+@dataclass
+class ActivityEvent:
+    ts: float
+    event_type: str
+    user: str
+    pool_id: int
+    amount: int
+    tx_hash: str
+    block_number: t.Optional[int] = None
+    status: t.Optional[int] = None
+
+
+@dataclass
+class AggregateStats:
+    total_deposited: int
+    total_withdrawn: int
+    net_flow: int
+    unique_users: int
+    pools_seen: int
+    recent_events: t.List[ActivityEvent]
+
+
+def load_network_config() -> NetworkConfig:
+    return NetworkConfig(
+        rpc_url=os.getenv("ATE8_RPC", "http://localhost:8545"),
+        chain_id=int(os.getenv("ATE8_CHAIN_ID", "1337")),
+        contract_address=os.getenv("ATE8_CONTRACT", "0x0000000000000000000000000000000000000000"),
+        guardian_key=os.getenv("ATE8_GUARDIAN_KEY", "0x" + "1" * 64),
+        treasurer_key=os.getenv("ATE8_TREASURER_KEY", "0x" + "2" * 64),
+    )
+
+
+def build_web3(cfg: NetworkConfig) -> Web3:
