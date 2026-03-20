@@ -211,3 +211,74 @@ EIGHTY_EIGHT_ABI: t.List[dict] = [
         "inputs": [
             {"internalType": "address", "name": "user", "type": "address"},
             {"internalType": "uint256", "name": "poolId", "type": "uint256"},
+        ],
+        "name": "previewClaimableReward",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "inputs": [],
+        "name": "currentLuckCycle",
+        "outputs": [
+            {
+                "components": [
+                    {"internalType": "uint64", "name": "id", "type": "uint64"},
+                    {"internalType": "uint64", "name": "luckyBlock", "type": "uint64"},
+                    {"internalType": "uint128", "name": "fortuneDelta", "type": "uint128"},
+                ],
+                "internalType": "struct EightyEightFinacio.CycleInfo",
+                "name": "",
+                "type": "tuple",
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "seedHint", "type": "uint256"},
+        ],
+        "name": "advanceLuckCycle",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "poolId", "type": "uint256"},
+            {"internalType": "address", "name": "asset", "type": "address"},
+            {"internalType": "uint96", "name": "leverageFactorBps", "type": "uint96"},
+            {"internalType": "bool", "name": "active", "type": "bool"},
+        ],
+        "name": "configurePool",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "poolId", "type": "uint256"},
+            {"internalType": "uint64", "name": "seasoningFactor", "type": "uint64"},
+            {"internalType": "uint64", "name": "streakBonusBps", "type": "uint64"},
+        ],
+        "name": "updatePoolSeasoning",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "token", "type": "address"},
+            {"internalType": "uint128", "name": "ratePerBlockScaled", "type": "uint128"},
+            {"internalType": "bool", "name": "active", "type": "bool"},
+        ],
+        "name": "setRewardStream",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "user", "type": "address"},
+            {"internalType": "uint256", "name": "poolId", "type": "uint256"},
