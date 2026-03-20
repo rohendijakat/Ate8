@@ -282,3 +282,74 @@ EIGHTY_EIGHT_ABI: t.List[dict] = [
         "inputs": [
             {"internalType": "address", "name": "user", "type": "address"},
             {"internalType": "uint256", "name": "poolId", "type": "uint256"},
+            {"internalType": "uint256", "name": "oracleSeed", "type": "uint256"},
+        ],
+        "name": "oracleHintedLuck",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256[]", "name": "poolIds", "type": "uint256[]"},
+        ],
+        "name": "snapshotPools",
+        "outputs": [
+            {
+                "components": [
+                    {"internalType": "uint256", "name": "poolId", "type": "uint256"},
+                    {"internalType": "address", "name": "asset", "type": "address"},
+                    {"internalType": "uint96", "name": "leverageFactorBps", "type": "uint96"},
+                    {"internalType": "bool", "name": "active", "type": "bool"},
+                    {"internalType": "uint64", "name": "seasoningFactor", "type": "uint64"},
+                    {"internalType": "uint64", "name": "streakBonusBps", "type": "uint64"},
+                    {"internalType": "uint256", "name": "poolCap", "type": "uint256"},
+                    {"internalType": "uint256", "name": "minDeposit", "type": "uint256"},
+                    {"internalType": "bool", "name": "allowlistedOnly", "type": "bool"},
+                    {"internalType": "uint256", "name": "totalPrincipal", "type": "uint256"},
+                ],
+                "internalType": "struct EightyEightFinacio.PoolSnapshot[]",
+                "name": "",
+                "type": "tuple[]",
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "user", "type": "address"},
+            {"internalType": "uint256[]", "name": "poolIds", "type": "uint256[]"},
+        ],
+        "name": "userPortfolioView",
+        "outputs": [
+            {
+                "components": [
+                    {"internalType": "uint256", "name": "poolId", "type": "uint256"},
+                    {"internalType": "uint192", "name": "principal", "type": "uint192"},
+                    {"internalType": "uint192", "name": "fortunePoints", "type": "uint192"},
+                    {"internalType": "uint192", "name": "fortuneClaimed", "type": "uint192"},
+                    {"internalType": "uint64", "name": "enteredAtBlock", "type": "uint64"},
+                    {"internalType": "uint64", "name": "lastFortuneBlock", "type": "uint64"},
+                    {"internalType": "uint256", "name": "pendingFortune", "type": "uint256"},
+                    {"internalType": "uint256", "name": "claimableReward", "type": "uint256"},
+                ],
+                "internalType": "struct EightyEightFinacio.UserPoolView[]",
+                "name": "",
+                "type": "tuple[]",
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+    },
+]
+
+
+cfg = load_network_config()
+w3 = build_web3(cfg)
+contract = w3.eth.contract(address=Web3.to_checksum_address(cfg.contract_address), abi=EIGHTY_EIGHT_ABI)
+
+app = FastAPI(title="Ate8 – 88Finacio Control Plane")
+
+app.add_middleware(
+    CORSMiddleware,
