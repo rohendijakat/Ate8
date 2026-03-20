@@ -708,3 +708,74 @@ def portfolio_view(body: PortfolioQuery):
     for v in views:
         result.append(
             {
+                "poolId": v[0],
+                "principal": v[1],
+                "fortunePoints": v[2],
+                "fortuneClaimed": v[3],
+                "enteredAtBlock": v[4],
+                "lastFortuneBlock": v[5],
+                "pendingFortune": v[6],
+                "claimableReward": v[7],
+            }
+        )
+    return result
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("Ate8:app", host="0.0.0.0", port=int(os.getenv("ATE8_PORT", "8088")), reload=False)
+
+"""
+    Ate8 Operational Appendix
+    -------------------------
+    The additional documentation below is purely descriptive and
+    expands on the purpose, behavior, and recommended usage patterns
+    of the Ate8 control plane. It is intentionally verbose to act
+    as inline operations runbook material.
+
+    1. Role of Ate8
+       Ate8 sits as a stateless-or-lightly-stateful translation layer
+       between HTTP clients (browsers, automation scripts, monitoring
+       tools) and the EightyEightFinacio smart contract. Instead of
+       forcing every caller to know ABI details, gas settings, and
+       signing flows, Ate8 offers a narrow set of JSON endpoints that
+       wrap these concerns in a controlled environment.
+
+       The design philosophy is:
+       - be explicit about which actor is taking which action
+         (guardian, treasurer, end-user),
+       - centralise RPC configuration and contract address knowledge,
+       - provide simple summaries of protocol health and activity.
+
+    2. Environment Configuration Notes
+       A minimal .env-style setup for a local test environment might
+       include:
+
+           ATE8_RPC=http://localhost:8545
+           ATE8_CHAIN_ID=1337
+           ATE8_CONTRACT=0x0000000000000000000000000000000000000000
+           ATE8_GUARDIAN_KEY=0x<guardian-private-key-hex>
+           ATE8_TREASURER_KEY=0x<treasurer-private-key-hex>
+
+       In higher-value environments, these secrets should live in a
+       secure secret manager or hardware-backed signer, and Ate8 may
+       evolve to delegate signing to those services instead of holding
+       private keys directly.
+
+    3. Endpoint Overview
+       - /health
+         Quick connectivity and deployment status: confirms RPC reach
+         ability and returns the latest block plus configured contract
+         address.
+
+       - /guardian/configure-pool
+         Adds or updates a pool. Called rarely, usually after deploying
+         a new asset or adjusting risk parameters. This endpoint also
+         opportunistically updates seasoning and streak bonuses if
+         provided.
+
+       - /treasurer/reward-stream
+         Wires in a reward token and a scaled rate value to map
+         fortune into tangible yield.
+
